@@ -1,46 +1,171 @@
+# SFA: Sparse Factor Analysis with Stan and Docker
 
-# SFA: Software for Sparse Factor Analysis
+This repository provides a ready-to-use **Docker environment** for running **RStudio Server** with **Stan** pre-installed.
+It supports running the **Sparse Factor Analysis (SFA)** model described in:
 
-This software is used to estimate the average effect of a treatment variable on an outcome, after controlling for background covariates.  Unlike the standard regression model, the proposed method combines a machine learning method to control for the background covariates while using a regression on the treatment variable of interest.  
+> **Kim, In Song, John Londregan, and Marc Ratkovic.**
+> *Sparse Factor Analysis for Text Data.*
+> Political Analysis, 2018. [https://doi.org/10.1017/pan.2018.3](https://doi.org/10.1017/pan.2018.3)
 
-The method, the Partially Linear Causal Effect (PLCE) model, models both the treatment and the outcome variable, returning a causal effect of the treatment on the outcome under the assumption that there are no omitted confounders and the treatment is random. The method handles random effects, incorporates a set of sensitivity analyses and, as shown in the accompanying manuscript, outperforms several existing method that use machine learning for causal inference.
+The Docker image includes everything needed to develop, run, and test SFA models in a reproducible, cross-platform setup.
 
-For more details, see  [Kim, Londregan, Ratkovic (2018)](cite).
+---
 
-
-## Installation 
-
-The latest version can be installed by:
-```R
-devtools::install_github('ratkovic/PLCE')
-```
-
-
-## Troubleshooting installation
-
-The software relies on `C++` code integrated into the `R` code through the `Rcpp` package.  If the software does not run on your machine, it may be fixed by ensuring that your compilers are set up properly.
-
-This advice below comes from `KRLS` by Hazlet and Sonnet [(link)](https://github.com/lukesonnet/KRLS).
-
-#### Windows
-If you are on Windows, you will need to install [RTools](https://cran.r-project.org/bin/windows/Rtools/) if you haven't already. If you still are having difficulty with installing and it says that the compilation failed, try installing it without support for multiple architectures:
-```R
-devtools::install_github('ratkovic/PLCE', args=c('--no-multiarch'))
-```
-
-#### Mac OSX
-
-In order to compile the `C++` in this package, `RcppArmadillo` will require you to have compilers installed on your machine. You may already have these, but you can install them by running:
+## 1. Clone this repository
 
 ```bash
-xcode-select --install
+git clone https://github.com/mannheimsds/sfa.git
+cd sfa
 ```
 
-If you are having problems with this install on Mac OSX, specifically if you are getting errors with either `lgfortran` or `lquadmath`, then try open your Terminal and try the following:
+---
+
+## 2. Pull the prebuilt Docker image
 
 ```bash
-curl -O http://r.research.att.com/libs/gfortran-4.8.2-darwin13.tar.bz2
-sudo tar fvxz gfortran-4.8.2-darwin13.tar.bz2 -C /
+docker pull mannheimsds/rstudio-stan-cache:latest
 ```
 
-Also see section 2.16 [here](http://dirk.eddelbuettel.com/code/rcpp/Rcpp-FAQ.pdf)
+> The image is **multi-architecture**, supporting both `amd64` (Intel/AMD) and `arm64` (Apple Silicon).
+
+---
+
+## 3. Prepare a local project folder
+
+If you don’t already have one:
+
+```bash
+mkdir -p SFA_Stan
+```
+
+This folder will be **mounted** inside the container so your Stan files and results persist on your host machine.
+
+---
+
+## 4. Run RStudio with Docker
+
+```bash
+docker run --rm \
+  -p 8787:8787 \
+  -e PASSWORD=yourpw \
+  -v "$(pwd)/SFA_Stan:/home/rstudio/SFA_Stan" \
+  mannheimsds/rstudio-stan-cache:latest
+```
+
+* Open [http://localhost:8787](http://localhost:8787) in your browser.
+* Log in with:
+
+  * **Username:** `rstudio`
+  * **Password:** `yourpw`
+
+> **macOS users:** If you don’t see files in RStudio, ensure the repo directory is allowed under
+> *Docker Desktop → Settings → Resources → File Sharing*.
+
+---
+
+## 5. Verify Stan installation
+
+Paste this into the **RStudio console** to confirm that Stan and `cmdstanr` are ready:
+
+```r
+library(cmdstanr)
+
+stan_code <- "
+data {
+  int<lower=0> N;
+  array[N] int<lower=0, upper=1> y;
+}
+parameters {
+  real<lower=0, upper=1> theta;
+}
+model {
+  theta ~ beta(1, 1);
+  y ~ bernoulli(theta);
+}
+"
+
+# Write the Stan file
+stan_file_path <- write_stan_file(stan_code)
+
+# Compile the model
+mod <- cmdstan_model(stan_file_path)
+
+# Example data
+data_list <- list(
+  N = 10,
+  y = c(0, 1, 0, 1, 1, 0, 0, 1, 1, 0)
+)
+
+# Sample
+fit <- mod$sample(
+  data = data_list,
+  chains = 2,
+  iter_sampling = 500,
+  iter_warmup = 250
+)
+
+# Print summary
+fit$summary()
+```
+
+You should see a table with a parameter `theta` estimated around **0.5**, confirming that Stan is working correctly.
+
+---
+
+## 6. Stopping the container
+
+Press **Ctrl + C** in the terminal where `docker run` is active.
+Because we used `--rm`, the container cleans itself up automatically.
+
+---
+
+## 7. Troubleshooting
+
+| Problem                         | Solution                                                                               |
+| ------------------------------- | -------------------------------------------------------------------------------------- |
+| **Port already in use (8787)**  | Change the left side of `-p`, e.g., `-p 8888:8787`, then open `http://localhost:8888`. |
+| **No files visible in RStudio** | Ensure the repo folder is shared with Docker Desktop (macOS/Windows).                  |
+| **CmdStan not initialized**     | Run `cmdstanr::install_cmdstan()` once inside RStudio to build CmdStan locally.        |
+| **Slow startup on first run**   | This is normal—CmdStan compiles the model the first time. Subsequent runs are cached.  |
+
+---
+
+## 8. Optional: Use Docker Compose
+
+Create a `docker-compose.yml` file with this content:
+
+```yaml
+version: "3.9"
+services:
+  rstudio:
+    image: mannheimsds/rstudio-stan-cache:latest
+    ports:
+      - "8787:8787"
+    environment:
+      PASSWORD: yourpw
+    volumes:
+      - ./SFA_Stan:/home/rstudio/SFA_Stan
+```
+
+Then launch with:
+
+```bash
+docker compose up
+```
+
+Stop with:
+
+```bash
+docker compose down
+```
+
+---
+
+## Project Structure
+
+```
+sfa/
+├── README.md            <- This file
+├── Dockerfile           <- Build instructions for the image
+└── SFA_Stan/            <- You
+```
