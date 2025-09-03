@@ -4,8 +4,8 @@ This repository provides a ready-to-use **Docker environment** for running **RSt
 It supports running the **Sparse Factor Analysis (SFA)** model described in:
 
 > **Kim, In Song, John Londregan, and Marc Ratkovic.**
-> *Sparse Factor Analysis for Text Data.*
-> Political Analysis, 2018. [https://doi.org/10.1017/pan.2018.3](https://doi.org/10.1017/pan.2018.3)
+> *Estimating Spatial Preferences from Votes and Text*
+> Political Analysis, 2018. [https://doi.org/10.1017/pan.2018.7](https://doi.org/10.1017/pan.2018.7)
 
 The Docker image includes everything needed to develop, run, and test SFA models in a reproducible, cross-platform setup.
 
