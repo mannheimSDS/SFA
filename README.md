@@ -11,16 +11,19 @@ The Docker image includes everything needed to develop, run, and test SFA models
 
 ---
 
-## 1. Clone this repository
+## 1. Clone this repository and navigate into the directory
 
 ```bash
 git clone https://github.com/mannheimsds/sfa.git
 cd sfa
 ```
 
+
 ---
 
 ## 2. Pull the prebuilt Docker image
+
+Ensure that you have Docker Desktop installed and running. [https://www.docker.com/products/docker-desktop/](https://www.docker.com/products/docker-desktop/)
 
 ```bash
 docker pull mannheimsds/rstudio-stan-cache:latest
@@ -30,19 +33,7 @@ docker pull mannheimsds/rstudio-stan-cache:latest
 
 ---
 
-## 3. Prepare a local project folder
-
-If you don’t already have one:
-
-```bash
-mkdir -p SFA_Stan
-```
-
-This folder will be **mounted** inside the container so your Stan files and results persist on your host machine.
-
----
-
-## 4. Run RStudio with Docker
+## 3. Run RStudio with Docker
 
 ```bash
 docker run --rm \
@@ -63,7 +54,7 @@ docker run --rm \
 
 ---
 
-## 5. Verify Stan installation
+## 4. Verify Stan installation
 
 Paste this into the **RStudio console** to confirm that Stan and `cmdstanr` are ready:
 
@@ -112,7 +103,7 @@ You should see a table with a parameter `theta` estimated around **0.5**, confir
 
 ---
 
-## 6. Stopping the container
+## 5. Stopping the container
 
 Press **Ctrl + C** in the terminal where `docker run` is active.
 Because we used `--rm`, the container cleans itself up automatically.
