@@ -36,9 +36,10 @@ docker pull mannheimsds/rstudio-stan-cache:latest
 ## 3. Run RStudio with Docker
 
 ```bash
-docker run --rm \
+  docker run --rm --user root \
   -p 8787:8787 \
   -e PASSWORD=yourpw \
+  -e CMDSTAN=/home/rstudio/.cmdstan/cmdstan-2.37.0 \
   -v "$(pwd)/SFA_Stan:/home/rstudio/SFA_Stan" \
   mannheimsds/rstudio-stan-cache:latest
 ```
