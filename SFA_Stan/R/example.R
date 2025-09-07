@@ -1,4 +1,4 @@
-# R/example.R
+#  R/example.R
 # IBFA: probit-IRT (votes) + hurdle-NB-IRT (words) with battery-wise horseshoe
 # Uses cmdstanr. Install toolchain once: install.packages("cmdstanr"); cmdstanr::install_cmdstan()
 
