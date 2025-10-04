@@ -163,6 +163,7 @@ b^V_j\sim\mathcal{N}(0,\sigma_{bV}^2).
 $$
 
 In the implementation, $b^V_j$ is integrated out via Gauss–Hermite quadrature:
+
 $$
 \Pr(X_{ij}=x)=\int \Pr(X_{ij}=x\mid b)\,\phi(b;0,\sigma_{bV}^2)\,db.
 $$
@@ -176,13 +177,16 @@ v_{i\ell}=\zeta\, z_i+\theta_i^\top\beta^S_\ell+(u^W_i)^\top\beta^W_\ell+\alpha^
 $$
 
 Global cutpoints (common across word items) via empirical CDF warp:
+
 $$
 \tau_c=\beta_0+\mathrm{F\_dir}\,\beta_1\,\big(F_y[c]\big)^{\beta_2},
 \qquad c=1,\dots,C,
 $$
+
 with $\beta_1>0$ and $\beta_2>0$ (monotone).
 
 Category probabilities (with $\alpha^W_\ell$ marginalized in code):
+
 $$
 \Pr(Y_{i\ell}=0)=\Phi(\tau_1-v_{i\ell}),\quad
 \Pr(Y_{i\ell}=y)=\Phi(\tau_{y+1}-v_{i\ell})-\Phi(\tau_y-v_{i\ell})\ (1\le y\le C-1),\quad
