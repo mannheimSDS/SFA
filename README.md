@@ -148,37 +148,37 @@ Because we used `--rm`, the container cleans itself up automatically.
 
 ### Votes: Type-II/CJR probit with marginalized thresholds
 Define the linear predictor (before the item threshold)
-\[
+$$
 \eta_{ij}^{(\text{no }b)} \;=\; \gamma^{V}_i \;+\; \theta_i^\top a^{S}_j \;+\; (u^V_i)^\top a^{V}_j.
-\]
+$$
 With probit link and a per-item threshold $b^{V}_j$,
-\[
+$$
 X_{ij}\mid \cdot,\,b^{V}_j \;\sim\; \mathrm{Bernoulli}\!\left(\Phi\big(\eta_{ij}^{(\text{no }b)} - b^{V}_j\big)\right),\quad
 b^{V}_j\sim\mathcal{N}(0,\sigma_{bV}^2).
-\]
+$$
 In the implementation, $b^{V}_j$ is **integrated out** via Gauss–Hermite quadrature:
-\[
+$$
 \Pr(X_{ij}=x) \;=\; \int \Pr(X_{ij}=x\mid b)\,\phi(b;0,\sigma_{bV}^2)\,db.
-\]
+$$
 
 ### Words: ordinal probit with global (shared) cutpoints
 For legislator $i$ and word item $\ell$,
-\[
+$$
 v_{i\ell} \;=\; \zeta\, z_i \;+\; \theta_i^\top \beta^{S}_\ell \;+\; (u^W_i)^\top \beta^{W}_\ell \;+\; \alpha^{W}_\ell,\qquad
 \alpha^{W}_\ell\sim \mathcal{N}(0,\sigma_{\alpha W}^2).
-\]
+$$
 Global cutpoints (common across all word items) are **data-driven via an empirical CDF warp**:
-\[
+$$
 \tau_c \;=\; \beta_0 \;+\; \mathrm{F\_dir}\cdot \beta_1\, \big(F_y[c]\big)^{\beta_2},
 \qquad c=1,\dots,C,
-\]
+$$
 which guarantees monotonicity when $\beta_1>0$ and $\beta_2>0$.
 
 Conditional category probabilities (with $\alpha^{W}_\ell$ marginalized by GH in the code):
-\[
+$$
 \Pr(Y_{i\ell}=0)=\Phi(\tau_1 - v_{i\ell}),\quad
 \Pr(Y_{i\ell}=y)=\Phi(\tau_{y+1}-v_{i\ell})-\Phi(\tau_{y}-v_{i\ell})\ (1\le y\le C-1),\quad
 \Pr(Y_{i\ell}=C)=1-\Phi(\tau_{C}-v_{i\ell}).
-\]
+$$
 
 > **Computation.** Both $b^{V}_j$ and $\alpha^{W}_\ell\
