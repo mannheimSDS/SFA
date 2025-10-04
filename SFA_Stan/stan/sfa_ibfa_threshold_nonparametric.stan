@@ -35,16 +35,6 @@ data {
   int<lower=1> Mgh;
   vector[Mgh] gh_nodes;
   vector[Mgh] gh_weights;
-
-  // New part, with empirical cdf
-  // Empirical function for counts used to place global cutpoints
-  // F_y has length C and corresponds to thresholds τ_0..τ_{C-1}
-  // e.g., survival F_y[c] = P(T >= c-1), CDF F_y[c] = P(T <= c-1)
-  vector<lower=1e-12, upper=1-1e-12>[C] F_y;
-
-  // Direction: +1 if F_y increases with c (CDF), -1 if decreases (survival)
-  int<lower=-1, upper=1> F_dir;
-
 }
 
 transformed data {
@@ -84,14 +74,8 @@ parameters {
   real<lower=0> c2_a_v_vote;
 
   // -------- Words (ordinal probit with global cutpoints) --------
-  // real tau0;                      // free hurdle cutpoint
-  // Old:   real log_delta;                 // spacing; delta = exp(log_delta)
-  // New: stops collapsing of log_delta
-  // real<lower=0.001> log_delta;                 // spacing; delta = exp(log_delta)
-    // global cutpoint parameters: τ_c = β0 + sign * β1 * F_y[c]^{β2}
-  real beta0;
-  real<lower=0.0001> beta1_pos;   // magnitude (sign handled by F_dir)
-  real<lower=0.0001> beta2;       // power (>0 ensures monotone warp)
+  real tau0;                      // free hurdle cutpoint
+  real log_delta;                 // spacing; delta = exp(log_delta)
   real zeta;                      // slope on z_log_tokens (offset)
   real<lower=0> sigma_alphaW;     // sd(word intercepts) — marginalized
 
@@ -116,7 +100,7 @@ transformed parameters {
   }
 
   // Positive spacing
-  // real delta = exp(log_delta);
+  real delta = exp(log_delta);
 
   // Build RHS loadings (actual coefficients)
   matrix[K_s, J] a_s_vote;
@@ -144,12 +128,6 @@ transformed parameters {
     real mult = (sqrt(c2_beta_w_word) * lt) / sqrt(c2_beta_w_word + square(lt));
     beta_w_word[k, l] = z_beta_w_word[k, l] * mult;
   }
-// New code: Adding in cutpoints once
-// Global cutpoints τ[1..C] on probit scale
-  vector[C] tau_vec;
-  for (c in 1:C)
-    tau_vec[c] = beta0 + F_dir * beta1_pos * pow(F_y[c], beta2);
-
 }
 
 model {
@@ -164,14 +142,8 @@ model {
   sigma_bV     ~ normal(0, 1) T[0,];      // votes: item-threshold sd
   sigma_alphaW ~ normal(0, 1) T[0,];      // words: item-intercept sd
 
-  // Old version
-  // tau0      ~ normal(0, 1.5);
-  // log_delta ~ normal(0, 0.5);
-  // Global cutpoints (replace old tau0/log_delta)
-  beta0     ~ normal(0, 1.5);
-  beta1_pos ~ normal(0, 1);      // half-Normal via <lower=0>
-  beta2     ~ normal(1, 0.5);    // gentle preference for ~linear spacing
-
+  tau0      ~ normal(0, 1.5);
+  log_delta ~ normal(0, 0.5);
   zeta      ~ normal(0, 1);
 
   // RHS (same as before)
@@ -212,8 +184,8 @@ model {
     }
     target += log_sum_exp(lp_m) - 0.5 * log(pi()); // add log(1/sqrt(pi))
   }
+
   // Words: marginalize word intercepts alphaW_l ~ N(0, sigma_alphaW^2)
-  /*
   for (l in 1:L) {
     vector[N] v0 = zeta * z_log_tokens + (theta * beta_s_word[, l]);
     if (K_w > 0) v0 += u_word * beta_w_word[, l];
@@ -241,40 +213,6 @@ model {
     }
     target += log_sum_exp(lp_m) - 0.5 * log(pi());
   }
-*/
-
-// New version
-  // Words: marginalize word intercepts alphaW_l ~ N(0, sigma_alphaW^2)
-  for (l in 1:L) {
-    vector[N] v0 = zeta * z_log_tokens + (theta * beta_s_word[, l]);
-    if (K_w > 0) v0 += u_word * beta_w_word[, l];
-
-    vector[Mgh] lp_m;
-    for (m in 1:Mgh) {
-      real a_m = sqrt(2) * sigma_alphaW * gh_nodes[m];
-      real ll = 0;
-      for (i in 1:N) {
-        int y = Y[i, l];
-        real v = v0[i] + a_m;
-        if (y == 0) {
-          // P(Y=0) = Φ(τ_0 - v)
-          ll += normal_lcdf(tau_vec[1] - v | 0, 1);
-        } else if (y < C) {
-          // P(Y=y) = Φ(τ_y - v) - Φ(τ_{y-1} - v)
-          ll += log_diff_exp(
-                  normal_lcdf(tau_vec[y + 1] - v | 0, 1),
-                  normal_lcdf(tau_vec[y]     - v | 0, 1)
-                );
-        } else { // y == C
-          // P(Y=C) = 1 - Φ(τ_{C-1} - v)
-          ll += normal_lccdf(tau_vec[C] - v | 0, 1);
-        }
-      }
-      lp_m[m] = log(gh_weights[m]) + ll;
-    }
-    target += log_sum_exp(lp_m) - 0.5 * log(pi());
-  }
-
 }
 
 generated quantities {
